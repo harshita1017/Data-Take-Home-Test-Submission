@@ -59,56 +59,9 @@ We assume a Kafka-based system and implement a Python script that:
 - Pushes failed events to a **retry queue**.
 - Uses retries and a **DLQ** to handle failures.
 
-### **📋 Python Code**
-```python
-from kafka import KafkaConsumer, KafkaProducer
-import json
-import time
+### **📋 Python Code** 
+Code: [View main.py](https://github.com/harshita1017/Data-Take-Home-Test-Submission/blob/main/main.py)
 
-# Kafka Config
-KAFKA_BROKER = "localhost:9092"
-INPUT_TOPIC = "event_stream"
-RETRY_TOPIC = "retry_events"
-DLQ_TOPIC = "dead_letter_queue"
-
-# Kafka Consumer
-consumer = KafkaConsumer(
-    INPUT_TOPIC,
-    bootstrap_servers=KAFKA_BROKER,
-    auto_offset_reset='earliest',
-    enable_auto_commit=False,
-    value_deserializer=lambda x: json.loads(x.decode('utf-8'))
-)
-
-# Kafka Producer
-producer = KafkaProducer(
-    bootstrap_servers=KAFKA_BROKER,
-    value_serializer=lambda x: json.dumps(x).encode('utf-8')
-)
-
-# Retry Tracking
-MAX_RETRIES = 3
-retry_counts = {}
-
-def process_event(event):
-    event_id = event.get("id", "unknown")
-
-    if event.get("status") != "processed":
-        if retry_counts.get(event_id, 0) < MAX_RETRIES:
-            retry_counts[event_id] = retry_counts.get(event_id, 0) + 1
-            producer.send(RETRY_TOPIC, event)
-        else:
-            send_to_dlq(event)
-
-def send_to_dlq(event):
-    producer.send(DLQ_TOPIC, event)
-    print(f"Event moved to Dead Letter Queue: {event}")
-
-for message in consumer:
-    process_event(message.value)
-    consumer.commit()
-    time.sleep(0.1)
-```
 
 ---
 
